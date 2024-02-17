@@ -1,18 +1,20 @@
 #include <chrono>
 #include <thread>
+// #include <iostream>
 using namespace std::chrono_literals;
 
 #include <cpprest/http_msg.h>
-#include <wiringPi.h>
+// #include <wiringPi.h>
+#include <pigpio.h>
 
 #include "metronome.hpp"
 #include "rest.hpp"
 
 // ** Remember to update these numbers to your personal setup. **
 #define LED_RED   17
-#define LED_GREEN 27
-#define BTN_MODE  23
-#define BTN_TAP   24
+#define LED_GREEN 18
+#define BTN_MODE  14
+#define BTN_TAP   15
 
 // Mark as volatile to ensure it works multi-threaded.
 volatile bool btn_mode_pressed = false;
@@ -33,7 +35,9 @@ void blink() {
 			on = false;
 
 		// HIGH/LOW probably equal 1/0, but be explicit anyways.
-		digitalWrite(LED_RED, (on) ? HIGH : LOW);
+		// digitalWrite(LED_RED, (on) ? HIGH : LOW);
+		gpioWrite(LED_RED, (on) ? 1 : 0);
+
 	}
 }
 
@@ -50,12 +54,19 @@ int main() {
 	// WiringPi must be initialized at the very start.
 	// This setup method uses the Broadcom pin numbers. These are the
 	// larger numbers like 17, 24, etc, not the 0-16 virtual ones.
-	wiringPiSetupGpio();
+	// wiringPiSetupGpio();
+	if (gpioInitialise() < 0) {
+		return 1;
+	}
 
 	// Set up the directions of the pins.
 	// Be careful here, an input pin set as an output could burn out.
-	pinMode(LED_RED, OUTPUT);
-	pinMode(BTN_MODE, INPUT);
+	// pinMode(LED_RED, OUTPUT);
+	gpioSetMode(LED_RED, PI_OUTPUT);
+	gpioSetMode(LED_GREEN, PI_OUTPUT);
+	// pinMode(BTN_MODE, INPUT);
+	gpioSetMode(BTN_MODE, PI_INPUT);
+	gpioSetMode(BTN_TAP, PI_INPUT);
 	// Note that you can also set a pull-down here for the button,
 	// if you do not want to use the physical resistor.
 	//pullUpDnControl(BTN_MODE, PUD_DOWN);
@@ -79,7 +90,8 @@ int main() {
 	while (true) {
 		// We are using a pull-down, so pressed = HIGH.
 		// If you used a pull-up, compare with LOW instead.
-		btn_mode_pressed = (digitalRead(BTN_MODE) == HIGH);
+		// btn_mode_pressed = (digitalRead(BTN_MODE) == HIGH);
+		btn_mode_pressed = (gpioRead(BTN_MODE) == 1);
 		// Delay a little bit so we do not poll too heavily.
 		std::this_thread::sleep_for(10ms);
 
