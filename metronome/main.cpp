@@ -11,10 +11,10 @@ using namespace std::chrono_literals;
 #include "rest.hpp"
 
 // ** Remember to update these numbers to your personal setup. **
-#define LED_RED   17
-#define LED_GREEN 18
-#define BTN_MODE  14
-#define BTN_TAP   15
+#define LED_RED   27
+#define LED_GREEN 17
+#define BTN_MODE  23
+#define BTN_TAP   24
 
 // Mark as volatile to ensure it works multi-threaded.
 volatile bool btn_mode_pressed = false;
