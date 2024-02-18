@@ -1,10 +1,9 @@
 #include <chrono>
 #include <thread>
-// #include <iostream>
+#include <string>
 using namespace std::chrono_literals;
 
 #include <cpprest/http_msg.h>
-// #include <wiringPi.h>
 #include <pigpio.h>
 
 #include "metronome.hpp"
@@ -18,12 +17,51 @@ using namespace std::chrono_literals;
 
 // Mark as volatile to ensure it works multi-threaded.
 volatile bool btn_mode_pressed = false;
+volatile bool is_startup = true;
+size_t blink_freq;
+metronome metro;
 
 // Run an additional loop separate from the main one.
 void blink() {
+	bool on = false;
+	
+	while (true){
+		std::this_thread::sleep_for(std::chrono::milliseconds(blink_freq));
+
+
+		if (!metro.is_timing() && !is_startup) {
+			gpioWrite(LED_GREEN, 1);
+			gpioDelay(10000);
+			gpioWrite(LED_GREEN, 0);
+		}
+	}
+}
+
+static void check_tap_button(){
 	gpioWrite(LED_RED, 1);
-	std::this_thread::sleep_for(1s);
-	gpioWrite(LED_RED, 0);
+	gpioDelay(10000);
+	gpioWrite(LED_RED,0);
+}
+
+void updateBPM() {
+	blink_freq = metro.get_bpm();
+	if (blink_freq !=0) {
+		blink_freq = (60*1000) / blink_freq;
+		is_startup = false;
+	}
+	else {
+		is_startup = true;
+	}
+}
+
+// -------------------------------end points-------------------------------------
+//cors issue
+void msg_reply(web::http::http_request msg, size_t content, int mode) {
+	web::http::http_response response(200);
+	response.headers().add("Access-Control-Allow-Origin", "*");
+	if(mode == 1)
+		response.set_body(web::json::value::number(content));
+	msg.reply(response);
 }
 
 // This is called when a GET request is made to "/answer".
@@ -31,33 +69,47 @@ void get42(web::http::http_request msg) {
 	msg.reply(200, web::json::value::number(42));
 }
 
-// --------------------metronome implementations----------------------------
-void metronome::start_timing() {
-	m_timing = true;
-	m_beat_count = 0;
+void getBPM(web::http::http_request msg) {
+	//msg.reply(200, web::json::value::number(metro.get_bpm()));
+	msg_reply(msg, metro.get_bpm(), 1);
 }
 
-void metronome::stop_timing() {
-	m_timing = false;
+void getMIN(web::http::http_request msg) {
+	
+	//msg.reply(200, web::json::value::number(metro.getMIN_MAX(MIN)));
+	msg_reply(msg, metro.getMIN_MAX(0), 1);
+}
+void getMAX(web::http::http_request msg) {
+	
+	//msg.reply(200, web::json::value::number(metro.getMIN_MAX(MAX)));
+	msg_reply(msg, metro.getMIN_MAX(1), 1);
 }
 
-void metronome::tap() {
-	if (m_timing && m_beat_count < beat_samples) {
-		auto now = std::chrono::system_clock::now().time_since_epoch().count();
-		m_beats[m_beat_count] = now;
-	}
+void delMIN(web::http::http_request msg) {
+	metro.delMIN_MAX(0);
+	updateBPM();
+	//msg.reply(200);
+	msg_reply(msg, 0 ,0);
 }
 
-size_t metronome::get_bpm() const {
-	if (m_beat_count < beat_samples)
-		return 0;
-
-	size_t sum = 0;
-	for (size_t i = 0; i < beat_samples - 1; ++i)
-		sum += m_beats[i + 1] - m_beats[i];
-	return 6000000000 / (sum / (beat_samples - 1));
-
+void delMAX(web::http::http_request msg) {
+	metro.delMIN_MAX(1);
+	updateBPM();
+	//msg.reply(200);
+	msg_reply(msg, 0 ,0);
 }
+
+void setBPM(web::http::http_request msg){
+	pplx::task<utility::string_t>msg_str = msg.extract_string();
+	std::string str = utility::conversions::to_utf8string(msg_str.get());
+	metro.addNewBPM(std::stoul (str,nullptr,0));
+	updateBPM();
+	msg_reply(msg, 0 ,0);
+}
+
+
+
+
 
 // This program shows an example of input/output with GPIO, along with
 // a dummy REST service.
@@ -77,14 +129,6 @@ int main() {
 	metronome my_metronome;
 	my_metronome.start_timing();
 
-
-	// simulate beat tapping
-	// for (int i = 0; i < metronome::beat_samples; ++i) {
-	// 	metronome.tap();
-	// 	blink();
-	// 	std::this_thread::sleep_for(1s);
-	// }
-
 	// Set up the directions of the pins.
 	// Be careful here, an input pin set as an output could burn out.
 	gpioSetMode(LED_RED, PI_OUTPUT);
@@ -99,25 +143,58 @@ int main() {
 	// but before we start using them.
 	// ** You should replace these with the BPM endpoints. **
 	auto get42_rest = rest::make_endpoint("/answer");
-	get42_rest.support(web::http::methods::GET, get42);
+	auto getBPM_rest = rest::make_endpoint("/bpm");
+	auto getMIN_rest = rest::make_endpoint("/bpm/min");
+	auto getMAX_rest = rest::make_endpoint("/bpm/max");
 
+	getBPM_rest.support(web::http::methods::GET, getBPM);
+	getBPM_rest.support(web::http::methods::PUT, setBPM);
+	getMIN_rest.support(web::http::methods::GET, getMIN);
+	getMIN_rest.support(web::http::methods::DEL, delMIN);
+	getMAX_rest.support(web::http::methods::GET, getMAX);
+	getMAX_rest.support(web::http::methods::DEL, delMAX);
+	get42_rest.support(web::http::methods::GET, get42);
 	// Start the endpoints in sequence.
+
+	getBPM_rest.open().wait();
+	getMIN_rest.open().wait();
+	getMAX_rest.open().wait();
 	get42_rest.open().wait();
+
 
 	// Use a separate thread for the blinking.
 	// This way we do not have to worry about any delays
 	// caused by polling the button state / etc.
-	for (int i =0; i< metronome::beat_samples; ++i) {
-		my_metronome.tap();
-		std::thread blink_thread(blink);
-		std::this_thread::sleep_for(1s);
+	std::thread blink_thread(blink);
+	blink_thread.detach();
+
+	blink_freq = 10000;
+	
+	while(true) {
+		//learning mode
+		if (gpioRead(BTN_MODE)==1){
+			printf("Learning button pressed\n");
+			if(!metro.is_timing())
+				metro.start_timing();
+			else {
+				metro.stop_timing();
+				updateBPM();
+			}
+			//btn_mode_pressed = !btn_mode_pressed;
+
+			gpioDelay(200000);
+		}
+		if (metro.is_timing()) {
+			if (gpioRead(BTN_TAP)==1) {
+				printf("Tap button pressed!\n");
+				metro.tap();
+				check_tap_button();
+				gpioDelay(200000);
+			}
+		}
+
+		std::this_thread::sleep_for(10ms);
 	}
-
-	my_metronome.stop_timing();
-	size_t bpm = my_metronome.get_bpm();
-	std::cout << "BPM: " << bpm << std::endl;
-
-	// blink_thread.detach();
 
 	gpioTerminate();
 

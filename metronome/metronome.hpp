@@ -45,19 +45,19 @@ public:
 			printf("New BPM = %u\n", m_beats[beat_samples-1]);
 		}
 		else {
-			printf("issue in recording BPM\nAt least 4 taps required for measurement")
+			printf("issue in recording BPM\nAt least 4 taps required for measurement");
 		}
 	}
 
 	// Should only record the current time when timing
 	// Insert the time at the next free position of m_beats
 	void tap(){
-		size_t time_stamp = millis();
+		size_t time_stamp = gpioTick()/1000;
 		if (firstTap ==0){
 			firstTap = time_stamp;
 		}
 		lastTap = time_stamp;
-		m_beat_count++
+		m_beat_count++;
 
 		//logs
 		printf("beat count: %d\n", m_beat_count);
