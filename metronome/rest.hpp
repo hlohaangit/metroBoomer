@@ -9,7 +9,7 @@ public:
         static http_listener make_endpoint(const std::string& path) {
                 web::uri_builder builder;
                 builder.set_scheme("http");
-                builder.set_host("0.0.0.0");
+                builder.set_host("10.20.207.26");
                 builder.set_port(8080);
                 builder.set_path(path);
 
