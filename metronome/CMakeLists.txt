@@ -8,4 +8,4 @@ set(cpprestsdk_DIR /usr/lib/${CMAKE_LIBRARY_ARCHITECTURE}/cmake/)
 find_package(cpprestsdk REQUIRED)
 
 add_executable(main main.cpp)
-target_link_libraries(main PRIVATE cpprestsdk::cpprest wiringPi boost_system)
+target_link_libraries(main PRIVATE cpprest pigpio rt crypto boost_system)

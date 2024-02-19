@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="UTF-8">
+    <title>Metronome Control Panel</title>
+    <style>
+        body {
+            font-family: 'Helvetica', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f0f0;
+            /* Light theme background */
+            transition: background-color 0.3s ease-in-out;
+        }
+
+        .night {
+            background-color: #333;
+            /* Dark theme background */
+            color: #ffffff;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr;
+            /* Creates a single column */
+            gap: 5px;
+            justify-content: center;
+            text-align: center;
+            height: auto;
+        }
+
+        .container h1 {
+            font-size: 2.5rem;
+            /* Increase font size */
+            font-weight: bold;
+            /* Make the text bolder */
+            margin-bottom: 30px;
+            /* Add some space below the header */
+        }
+
+        .container h2 {
+            font-size: 2.1rem;
+            /* Increase font size */
+            font-weight: 500;
+            margin: 0em 0em .5em 0em;
+        }
+
+        .button-container {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .card {
+            background-color: white;
+            margin: 10px auto;
+            padding: 16px;
+            border-radius: 10px;
+            border: 3px solid #fbfbfb;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            box-sizing: border-box;
+
+        }
+
+        @media (max-width: 768px) {
+            .card {
+                width: 90%;
+                /* Or any other max-width that fits your design */
+            }
+        }
+
+        .night .card {
+            background-color: #555;
+            /* Dark theme card background */
+            color: #dddddd;
+            /*border: 4px solid #5a5a5a;*/
+            border: 3px solid #5a5a5a;
+        }
+
+        button {
+            white-space: nowrap;
+            cursor: pointer;
+            padding: 10px 15px;
+            margin: 10px;
+            border-radius: 10px;
+            border: 3px solid #006ee3;
+            /* Define border style, width, and color */
+            background-color: #007bff;
+            color: white;
+            font-size: 1.1rem;
+            text-align: center;
+            display: inline-block;
+
+        }
+
+        button:hover,
+        input[type="submit"]:hover {
+            filter: brightness(85%);
+            /* Darkens the color */
+            transition: filter 0.2s ease-in-out;
+        }
+
+        button:active,
+        input[type="submit"]:active {
+            filter: brightness(75%);
+            /* Even darker when active/clicked */
+            transform: scale(0.98);
+        }
+
+        .theme-toggle {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            background-color: #4CAF50;
+            /* Green background for toggle button */
+            border: 3px solid #419f44;
+            color: white;
+            border-radius: 50%;
+            /* Circular button */
+            font-size: 26px;
+            width: 48px;
+            height: 48px;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            line-height: 48px;
+            /* Removed padding-left: 21px; */
+        }
+
+        #new_bpm {
+            font-size: 1.1rem;
+            padding: 6px 8px;
+            width: 30%;
+            margin-right: 15px;
+            border-radius: 8px;
+            border: 2px solid #b6b6b6;
+            text-align: center;
+        }
+
+        .card p {
+            width: 15em;
+            font-size: 1.2rem;
+            margin: 1px 5px;
+            text-align: left;
+            font-weight: 500;
+            padding-left: 10px;
+
+        }
+
+        form {
+            display: flex;
+            justify-content: center;
+            /* Center items horizontally */
+            align-items: center;
+            /* Align items vertically */
+
+
+        }
+
+        input[type="submit"] {
+            height: 36px;
+            font-size: 1.20rem;
+            /* Complementary font size */
+            padding: 6px 8px;
+            cursor: pointer;
+            border: 2px solid #b6b6b6;
+            border-radius: 10px;
+            text-align: center;
+
+        }
+
+        #splash-screen {
+            position: fixed;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: black;
+            /* To cover the whole screen in black */
+            z-index: 9999;
+            transition: opacity 1.5s ease-in-out;
+        }
+
+        #splash-screen .logo,
+        #splash-screen .subtitle {
+            font-family: Helvetica, sans-serif;
+            color: rgb(250, 250, 250);
+            /* White color for visibility */
+            opacity: 0;
+            /* Start hidden */
+            text-align: center;
+            transition: opacity 0.8s ease-out;
+            /* Transition effect */
+            margin: 0 auto;
+            /* Center alignment */
+        }
+
+        #splash-screen .logo {
+            transition: opacity 0.8s ease-out 0.5s;
+            /* Logo appears first */
+            margin-bottom: 1em;
+            font-size: 7vw;
+
+        }
+
+        #splash-screen .second-logo {
+            font-size: 5vw;
+            transition: opacity 0.8s ease-out 1s;
+            /* Delay the appearance slightly after the first logo */
+        }
+
+        #splash-screen .subtitle {
+            font-size: 3vw;
+            transition: opacity 0.8s ease-out 1s;
+            /* Subtitle appears shortly after */
+            color: #9f9f9f;
+            /* Making the subtitle grey */
+        }
+
+        @media (max-width: 768px) {
+            #splash-screen .logo {
+                font-size: 10vw;
+                /* Slightly larger font size on smaller screens for readability */
+            }
+
+            #splash-screen .second-logo {
+                font-size: 8vw;
+                /* Slightly larger font size on smaller screens for readability */
+            }
+
+            #splash-screen .subtitle {
+                font-size: 3.5vw;
+                /* Adjusts font size for better readability on phones */
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <body class="is-preload">
+        <div id="splash-screen">
+            <div class="logo">Lab 3</div>
+            <div class="logo second-logo">HyperBIT (Group 11)</div>
+            <div class="subtitle">Harshit Lohaan, Lee Caputo, Imthiaz Hussain, Efren Lopez</div>
+        </div>
+
+        <button id="theme-toggle" class="theme-toggle" onclick="toggleTheme()"></button>
+
+
+        <div class="container">
+            <h1>Metronome Control Panel</h1>
+            <div class="card">
+                <h2>Controls</h2>
+                <div class="button-container">
+                    <button onclick="refresh_values()">Fetch BPM</button>
+                    <button onclick="reset()">Reset BPMs</button>
+                </div>
+
+                <form onsubmit="return false" style="margin-top: 22px;">
+                    <input type="number" id="new_bpm" name="new_bpm" value="Enter Header" placeholder="New BPM">
+                    <input type="submit" value="Set" onclick="setBpm()">
+                </form>
+            </div>
+            <div class="card1">
+                <p>Current BPM: </p>
+            </div>
+            <div class="card2">
+                <p>Minimum BPM: </p>
+            </div>
+            <div class="card3">
+                <p>Maximum BPM: </p>
+            </div>
+
+        </div>
+
+        <script>
+            var url = "http://10.20.207.26:8080";
+
+            document.addEventListener('DOMContentLoaded', function () {
+                const themeToggle = document.querySelector('.theme-toggle'); //
+                const prefersDarkScheme = window.matchMedia('(prefers-color-scheme: dark)');
+
+                setInitialTheme(prefersDarkScheme.matches);
+
+                prefersDarkScheme.addEventListener('change', e => {
+                    setInitialTheme(e.matches);
+                });
+            });
+
+            function toggleTheme() {
+                document.body.classList.toggle('night');
+                updateThemeButton();
+            }
+
+            function setInitialTheme(isDark) {
+                // Apply initial theme based on the user system preference
+                if (isDark) {
+                    document.body.classList.add('night');
+                } else {
+                    document.body.classList.remove('night');
+                }
+                updateThemeButton();
+            }
+
+            function updateThemeButton() {
+                const themeToggle = document.querySelector('.theme-toggle');
+                if (document.body.classList.contains('night')) {
+                    themeToggle.innerHTML = '&#x263E;';
+                } else {
+                    themeToggle.innerHTML = '&#x263C;'; // 
+                }
+            }
+
+            window.addEventListener('load', function () {
+                var splashScreen = document.getElementById('splash-screen');
+                var firstLogo = splashScreen.querySelector('.logo');
+                var secondLogo = splashScreen.querySelector('.second-logo'); // Target the second logo
+                var subtitle = splashScreen.querySelector('.subtitle');
+
+
+                setTimeout(function () {
+                    firstLogo.style.opacity = '1';
+                }, 400);
+
+                //  second logo
+                setTimeout(function () {
+                    secondLogo.style.opacity = '1'; //
+                }, 1000);
+
+                // fade in the subtitle
+                setTimeout(function () {
+                    subtitle.style.opacity = '1';
+                }, 2400);
+
+                // the entire splash screen after a longer delay
+                setTimeout(function () {
+                    splashScreen.style.opacity = '0';
+                    setTimeout(function () {
+                        splashScreen.remove();
+                    }, 2000);
+                }, 6000);
+            });
+
+            function refresh_values() {
+                fetch(url + "/bpm")
+                    .then(response => response.json())
+                    .then(data => {
+                        document.querySelector('.card1 p:nth-of-type(1)').innerHTML = "Current BPM: " + data;
+                    });
+                fetch(url + "/bpm/min")
+                    .then(response => response.json())
+                    .then(data => {
+                        document.querySelector('.card2 p:nth-of-type(1)').innerHTML = "Minimum BPM: " + data;
+                    });
+                fetch(url + "/bpm/max")
+                    .then(response => response.json())
+                    .then(data => {
+                        document.querySelector('.card3 p:nth-of-type(1)').innerHTML = "Maximum BPM: " + data;
+                    });
+            }
+
+            function reset() {
+                fetch(url + "/bpm/max", {
+                    method: 'DELETE'
+                });
+                fetch(url + "/bpm/min", {
+                    method: 'DELETE'
+                });
+                alert("The BPM among four samples is set to 0!");
+                refresh_values();
+
+            }
+
+            function setBpm() {
+                var input = parseInt(document.getElementById("new_bpm").value);
+                if (input < 0 || input > 6000) {
+                    alert("Value should between 0~6000!");
+                    return;
+                }
+                fetch(url + "/bpm", {
+                    method: 'PUT',
+                    body: JSON.stringify(input),
+                    headers: {
+                        'Content-type': 'application/json; charset=UTF-8'
+                    }
+                }).then(data => {
+                        console.log(data);
+                        refresh_values();
+                    });      
+                
+
+            }
+
+            window.onload = function () {
+                refresh_values();
+            }
+
+
+        </script>
+
+    </body>
+
+</html>
